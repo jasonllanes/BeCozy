@@ -1,6 +1,6 @@
 import { GAMES } from '../games/registry.js';
 
-export default function GameSelect({ onPick, onBack }) {
+export default function GameSelect({ onPick, onBack, onLeaderboard }) {
   return (
     <main className="page">
       <header className="page-head">
@@ -8,6 +8,9 @@ export default function GameSelect({ onPick, onBack }) {
           ← Back
         </button>
         <h1>Choose a game</h1>
+        <button className="btn btn-small btn-honey push-right" onClick={onLeaderboard}>
+          🏆 Leaderboard
+        </button>
       </header>
 
       <div className="game-grid">

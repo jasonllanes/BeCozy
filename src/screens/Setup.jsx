@@ -3,7 +3,7 @@ import { PLAYERS } from '../lib/players.js';
 import { computeZones } from '../lib/zones.js';
 import { PRESETS, deleteCustomGesture, loadCustomGestures } from '../hand/gestures.js';
 
-function Choice({ options, value, onChange }) {
+export function Choice({ options, value, onChange }) {
   const help = options.find((o) => o.value === value)?.help;
   return (
     <>
@@ -19,7 +19,7 @@ function Choice({ options, value, onChange }) {
   );
 }
 
-function Toggle({ label, hint, emoji, value, onChange }) {
+export function Toggle({ label, hint, emoji, value, onChange }) {
   return (
     <button className={`toggle ${value ? 'on' : ''}`} onClick={() => onChange(!value)} role="switch" aria-checked={value}>
       <span className="toggle-emoji">{emoji}</span>
@@ -59,7 +59,7 @@ function SplitPreview({ players, layout }) {
   );
 }
 
-function GesturePicker({ value, onChange, onRecord }) {
+export function GesturePicker({ value, onChange, onRecord, canRecord = true }) {
   const [customs, setCustoms] = useState(loadCustomGestures);
   const remove = (id) => {
     deleteCustomGesture(id);
@@ -86,17 +86,19 @@ function GesturePicker({ value, onChange, onRecord }) {
             )}
           </div>
         ))}
-        <button className="gesture-tile gesture-add" onClick={onRecord}>
-          <span className="gesture-emoji">＋</span>
-          <span className="gesture-name">Record your own</span>
-        </button>
+        {canRecord && (
+          <button className="gesture-tile gesture-add" onClick={onRecord}>
+            <span className="gesture-emoji">＋</span>
+            <span className="gesture-name">Record your own</span>
+          </button>
+        )}
       </div>
       {current && <p className="note">{current.desc}.</p>}
     </>
   );
 }
 
-export default function Setup({ game, settings, onChange, onBack, onStart, onRecord }) {
+export default function Setup({ game, settings, onChange, onBack, onStart, onRecord, onOnline }) {
   const set = (key) => (value) => onChange({ ...settings, [key]: value });
   const layoutOptions =
     settings.players === 2
@@ -178,8 +180,13 @@ export default function Setup({ game, settings, onChange, onBack, onStart, onRec
 
       <div className="start-bar">
         <button className="btn btn-huge btn-honey" onClick={onStart}>
-          ▶ Start {game.name}
+          ▶ Play here
         </button>
+        {game.online && onOnline && (
+          <button className="btn btn-huge btn-berry" onClick={onOnline}>
+            🌐 Play online
+          </button>
+        )}
       </div>
     </main>
   );

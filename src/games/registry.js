@@ -23,6 +23,7 @@ export const GAMES = [
     maxPlayers: 4,
     available: true,
     gestures: true,
+    online: true,
     Component: lazy(() => import('./fruitNinja/FruitNinja.jsx')),
     defaults: { mode: 'classic', difficulty: 'normal', duration: 60, bombs: true, powerups: true, trail: true, gesture: 'point' },
     settings: [

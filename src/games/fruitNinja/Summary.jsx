@@ -1,3 +1,5 @@
+import ScorePoster from './ScorePoster.jsx';
+
 const fmtTime = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 // Fun superlatives, only handed out when there's a clear winner of the category.
@@ -28,7 +30,7 @@ function Stat({ emoji, label, value }) {
   );
 }
 
-export default function Summary({ data, settings, gesture, onAgain, onSettings, onExit }) {
+export default function Summary({ data, settings, gesture, onAgain, onSettings, onExit, actions = null, meIndex = null, prefill = '' }) {
   const { players, playTime, best } = data;
   const survival = settings.mode === 'survival';
   const solo = players.length === 1;
@@ -106,16 +108,22 @@ export default function Summary({ data, settings, gesture, onAgain, onSettings, 
           </div>
         )}
 
+        <ScorePoster players={players} settings={settings} gesture={gesture} only={meIndex} prefill={prefill} />
+
         <div className="row">
-          <button className="btn btn-big btn-honey" onClick={onAgain}>
-            ↻ Play again
-          </button>
-          <button className="btn" onClick={onSettings}>
-            ⚙ Settings
-          </button>
-          <button className="btn" onClick={onExit}>
-            🏠 Games
-          </button>
+          {actions || (
+            <>
+              <button className="btn btn-big btn-honey" onClick={onAgain}>
+                ↻ Play again
+              </button>
+              <button className="btn" onClick={onSettings}>
+                ⚙ Settings
+              </button>
+              <button className="btn" onClick={onExit}>
+                🏠 Games
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

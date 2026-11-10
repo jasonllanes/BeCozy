@@ -47,6 +47,7 @@ export function useTracker({ faces = false } = {}) {
   const lastTime = useRef(-1);
   const latest = useRef(EMPTY);
   const [camera, setCamera] = useState('loading'); // loading | ready | error
+  const [stream, setStream] = useState(null);
   const [handsReady, setHandsReady] = useState(false);
   const [facesReady, setFacesReady] = useState(false);
   const [error, setError] = useState('');
@@ -85,7 +86,10 @@ export function useTracker({ faces = false } = {}) {
         video.srcObject = stream;
         await video.play();
         filesetRef.current = fileset;
-        if (!cancelled) setCamera('ready');
+        if (!cancelled) {
+          setStream(stream);
+          setCamera('ready');
+        }
       } catch (e) {
         if (!cancelled) fail(e);
       }
@@ -94,6 +98,7 @@ export function useTracker({ faces = false } = {}) {
     return () => {
       cancelled = true;
       stream?.getTracks().forEach((t) => t.stop());
+      setStream(null);
       if (videoRef.current) videoRef.current.srcObject = null;
     };
   }, [attempt, fail]);
@@ -178,5 +183,5 @@ export function useTracker({ faces = false } = {}) {
 
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
 
-  return { videoRef, status, error, detect, retry };
+  return { videoRef, status, error, detect, retry, stream };
 }

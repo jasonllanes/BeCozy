@@ -26,6 +26,10 @@ jobs:
       # postinstall copies the MediaPipe WASM and downloads the hand/face models into /public
       - run: npm ci
       - run: npm run build
+        env:
+          # Supabase publishable key: public by design, but kept in repo secrets, not in git
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist

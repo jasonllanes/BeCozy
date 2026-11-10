@@ -1,4 +1,5 @@
 import { PLAYERS } from '../../lib/players.js';
+import { mulberry32 } from '../../lib/rng.js';
 
 const FONT = 'Fredoka, "Trebuchet MS", "Segoe UI", sans-serif';
 const EMOJI_FONT = '"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
@@ -105,7 +106,9 @@ export class FruitNinjaEngine {
    * settings: { mode: 'classic'|'survival', difficulty, duration, bombs, powerups, trail }
    * gesture:  decorated gesture def (prompt / hint / cheer / speed)
    */
-  constructor({ players, settings, gesture, onSound }) {
+  constructor({ players, settings, gesture, onSound, seed = null, identities = null }) {
+    this.ids = identities || PLAYERS; // who each zone belongs to (name / colour / emoji)
+    this.rng = seed == null ? Math.random : mulberry32(seed); // seeded => identical fruit for every online player
     this.settings = settings;
     this.gesture = gesture;
     this.survival = settings.mode === 'survival';
@@ -170,7 +173,7 @@ export class FruitNinjaEngine {
       const top = Object.entries(z.fruitCounts).sort((a, b) => b[1] - a[1])[0];
       const total = z.sliced + z.missed;
       return {
-        ...PLAYERS[i],
+        ...this.ids[i],
         score: z.score,
         sliced: z.sliced,
         missed: z.missed,
@@ -185,6 +188,16 @@ export class FruitNinjaEngine {
         topFruit: top ? top[0] : null,
       };
     });
+  }
+
+  _rand(lo, hi) {
+    return lo + this.rng() * (hi - lo);
+  }
+
+  /** Compact live state for the online scoreboard. */
+  snapshot() {
+    const z = this.zs[0];
+    return { score: z.score, hp: z.hp, dead: z.dead, mult: z.mult.left > 0 ? z.mult.v : 1, slow: z.slow > 0, sliced: z.sliced, phase: this.phase };
   }
 
   // ---- update -------------------------------------------------------------
@@ -269,27 +282,33 @@ export class FruitNinjaEngine {
   }
 
   _pickPower(z) {
-    const entries = Object.entries(POWERS).filter(([k]) => k !== 'heal' || (this.survival && z.hp < MAX_HP));
-    let r = Math.random() * entries.reduce((s, [, p]) => s + p.weight, 0);
+    const entries = Object.entries(POWERS);
+    let r = this.rng() * entries.reduce((s, [, p]) => s + p.weight, 0);
+    let key = entries[0][0];
     for (const [k, p] of entries) {
       r -= p.weight;
-      if (r <= 0) return k;
+      if (r <= 0) {
+        key = k;
+        break;
+      }
     }
-    return entries[0][0];
+    // a heart only makes sense in survival when you are missing one
+    if (key === 'heal' && !(this.survival && z.hp < MAX_HP)) key = 'x2';
+    return key;
   }
 
   _spawn(z, zone, tdt) {
     z.spawnIn -= tdt;
     if (z.spawnIn <= 0) {
       const { interval, wave, bomb } = this.cfg;
-      z.spawnIn = interval * rand(0.8, 1.3);
-      const count = Math.floor(rand(wave[0], wave[1] + 1));
+      z.spawnIn = interval * this._rand(0.8, 1.3);
+      const count = Math.floor(this._rand(wave[0], wave[1] + 1));
       const bombP = this.survival ? bomb * 1.25 : bomb;
       for (let i = 0; i < count; i++) {
         let kind = 'fruit';
         let power = null;
-        if (this.bombsOn && Math.random() < bombP) kind = 'bomb';
-        else if (this.settings.powerups && Math.random() < POWER_CHANCE) {
+        if (this.bombsOn && this.rng() < bombP) kind = 'bomb';
+        else if (this.settings.powerups && this.rng() < POWER_CHANCE) {
           kind = 'power';
           power = this._pickPower(z);
         }
@@ -310,22 +329,22 @@ export class FruitNinjaEngine {
   _launch(z, zone, kind, power) {
     const r = this._radius(zone);
     const g = zone.h * this.cfg.gravity;
-    const apex = zone.h * rand(0.5, 0.88);
+    const apex = zone.h * this._rand(0.5, 0.88);
     const vy = -Math.sqrt(2 * g * (apex + r));
     const flight = (2 * -vy) / g;
-    const x0 = zone.w * rand(0.14, 0.86);
-    const xt = zone.w * rand(0.12, 0.88);
+    const x0 = zone.w * this._rand(0.14, 0.86);
+    const xt = zone.w * this._rand(0.12, 0.88);
     z.items.push({
       x: x0,
       y: zone.h + r,
       vx: (xt - x0) / flight,
       vy,
       r,
-      rot: rand(0, Math.PI * 2),
-      vr: kind === 'fruit' ? rand(-4, 4) : rand(-1.5, 1.5),
+      rot: this._rand(0, Math.PI * 2),
+      vr: kind === 'fruit' ? this._rand(-4, 4) : this._rand(-1.5, 1.5),
       kind,
       power,
-      fruit: FRUITS[Math.floor(Math.random() * FRUITS.length)],
+      fruit: FRUITS[Math.floor(this.rng() * FRUITS.length)],
     });
   }
 
@@ -492,7 +511,7 @@ export class FruitNinjaEngine {
   }
 
   _drawZone(ctx, z, zone, i) {
-    const P = PLAYERS[i];
+    const P = this.ids[i];
     const s = this._scale(zone);
     ctx.save();
     ctx.beginPath();
@@ -742,7 +761,7 @@ export class FruitNinjaEngine {
   _drawFrames(ctx, zones) {
     zones.forEach((zn, i) => {
       if (!this.zs[i]) return;
-      const P = PLAYERS[i];
+      const P = this.ids[i];
       const s = this._scale(zn);
       const inset = 5 * s;
       ctx.lineJoin = 'round';
